@@ -30,6 +30,55 @@ A Domain-Specific Language (DSL) is a specialized programming language designed 
 
 * **Performance**: Favor value types (structs/enums) and compile-time features (result builders, @inlinable) to minimize runtime overhead. Use async inference where possible to reduce boilerplate in async methods.
 
+## DSL Implementation Architecture
+
+### Modular Organization for DSLs
+
+* **Modular File Structure**: Implement DSLs using a modular architecture rather than monolithic files. This improves maintainability, testing, and developer experience by separating concerns logically.
+
+* **Recommended Module Structure**:
+  - **Core Module**: Fundamental types, protocols, and base utilities
+  - **Domain Modules**: DSL-specific types (e.g., message types, configuration parameters)
+  - **Builder Modules**: Result builders and DSL syntax components
+  - **Client/Infrastructure Modules**: Networking, execution, and external integrations
+  - **Utility Modules**: Helper functions, convenience methods, and extensions
+  - **Main Module**: Entry point with comprehensive documentation
+
+* **Module Naming Conventions**:
+  - Use descriptive, domain-specific names (e.g., `Messages.swift`, `Configuration.swift`)
+  - Follow Swift naming conventions (PascalCase for files)
+  - Group related functionality together
+  - Keep files focused on single responsibilities
+
+* **Cross-Module Dependencies**:
+  - Define protocols in core modules, implementations in domain modules
+  - Use dependency injection for external services
+  - Minimize coupling between modules
+  - Document module interfaces clearly
+
+* **DSL-Specific Testing**:
+  - Test each module independently
+  - Include builder pattern tests
+  - Validate DSL syntax and error handling
+  - Test cross-module integrations
+  - Use DSL examples as documentation tests
+
+* **Documentation Strategy**:
+  - Include DSL usage examples in main module
+  - Document each module's responsibility
+  - Provide migration guides for DSL evolution
+  - Include performance characteristics
+
+### DSL Evolution and Maintenance
+
+* **Versioning Strategy**: Use semantic versioning for DSL APIs. Increment major version for breaking changes, minor for new features, patch for bug fixes.
+
+* **Migration Support**: Provide migration guides and compatibility layers when evolving DSL syntax or structure.
+
+* **Extensibility Guidelines**: Design DSL components to be easily extensible without breaking existing code.
+
+* **Performance Monitoring**: Include performance benchmarks for DSL operations and provide optimization guidelines.
+
 ## Macro Opportunities for Boilerplate Reduction
 
 ### Parameter Configuration Macros

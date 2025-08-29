@@ -32,6 +32,53 @@ This specification outlines patterns and requirements for generating high-qualit
 
 * **Headless Compatibility**: Ensure code is usable in headless server environments (e.g., REST servers). Avoid dependencies on UI frameworks (e.g., UIKit, AppKit, SwiftUI). Make features like @Observable optional via conditional compilation (e.g., #if canImport(Observation)). The code must compile and run on Linux for server-side deployment; validate via swift build --platform linux.
 
+## Code Organization and Modularization
+
+* **Modular Architecture**: Generate code using a modular file structure rather than monolithic files. Break down functionality into focused modules based on responsibility and coupling. This improves maintainability, testing, and developer experience.
+
+* **Module Organization**:
+  - **Core Module**: Basic types, protocols, and foundational utilities (e.g., Core.swift)
+  - **Domain Modules**: Feature-specific modules (e.g., Messages.swift, Configuration.swift, API.swift)
+  - **Infrastructure Modules**: Networking, persistence, or external integrations (e.g., Client.swift)
+  - **Utility Modules**: Builders, helpers, and convenience functions (e.g., Builders.swift, Convenience.swift)
+  - **Main Module**: Entry point with documentation and module coordination (e.g., PackageName.swift)
+
+* **File Naming Conventions**:
+  - Use PascalCase for file names matching the primary type they contain
+  - Prefer descriptive names over abbreviations (e.g., `ConfigurationParameters.swift` over `ConfigParams.swift`)
+  - Use plural names for collections (e.g., `Messages.swift` for message types)
+  - Reserve main file name for the package entry point (e.g., `SwiftResponsesDSL.swift`)
+
+* **Import/Export Strategy**:
+  - Avoid explicit imports within the same module - leverage automatic availability
+  - Use `_exported import` sparingly for public API surface management
+  - Document module dependencies clearly in comments
+  - Ensure no circular dependencies between modules
+
+* **Cross-Module Dependencies**:
+  - Define protocols in core modules, implementations in domain modules
+  - Use dependency injection for external services
+  - Prefer composition over inheritance for module interactions
+  - Document public API contracts between modules
+
+* **Testing Considerations**:
+  - Create test files mirroring module structure (e.g., `CoreTests.swift`, `MessagesTests.swift`)
+  - Test modules in isolation when possible
+  - Use protocol mocks for cross-module dependencies
+  - Include integration tests for module interactions
+
+* **Documentation Standards**:
+  - Include module-level documentation in the main file
+  - Document module responsibilities and dependencies
+  - Provide usage examples for each module's primary functionality
+  - Use consistent comment styles across all modules
+
+* **Generated Code Standards**:
+  - Include standard header comments in every generated file
+  - Document generation metadata (version, date, spec reference)
+  - Include modification policy and history sections
+  - Reference the generating specification and version
+
 * **Modern Swift Features**: Leverage Swift 6.2+ capabilities:
   - **Macros**: Use for code generation and compile-time validation (e.g., @attached(member) macros for builder patterns)
   - **Improved Generics**: Utilize enhanced generic parameter inference and variadic generics where appropriate

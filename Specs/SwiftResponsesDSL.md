@@ -40,6 +40,18 @@ Minimum Platform Versions:
 - iOS 15.0
 - Linux (Ubuntu 22.04+ with Swift 6.0+ toolchain)
 
+Modular Architecture: Implement the DSL using a modular file structure for improved maintainability and developer experience. The generated code must be organized into focused modules rather than a single monolithic file.
+
+Modular Organization:
+- Core.swift: Basic enums, protocols, and AnyCodable type-erased codable
+- Messages.swift: Message types (SystemMessage, UserMessage, AssistantMessage) and ContentPart
+- Configuration.swift: Configuration parameter structs (Temperature, TopP, MaxOutputTokens, etc.)
+- API.swift: Request/response types (ResponseRequest, Response, Tool, OutputItem) and conversation management
+- Client.swift: LLMClient actor with networking and convenience methods
+- Builders.swift: Result builders (@ResponseBuilder, @ResponseConfigBuilder)
+- Convenience.swift: Helper functions (system(), user(), assistant(), tool())
+- SwiftResponsesDSL.swift: Main entry point with documentation and module coordination
+
 
 Package.swift Configuration:
 ```swift
