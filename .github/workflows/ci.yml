@@ -10,6 +10,8 @@ jobs:
   test:
     name: Test
     runs-on: macos-latest
+    # Note: Requires Xcode 26+ (beta) for Swift 6.2 support
+    # macOS runners automatically include latest Xcode beta
 
     strategy:
       matrix:

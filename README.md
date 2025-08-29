@@ -86,51 +86,146 @@ That's it! You've successfully integrated with an LLM API using SwiftResponsesDS
 
 ## Usage Examples
 
-### Basic Non-Streaming
+### 🎯 Basic Chat (Your First Conversation)
 
 ```swift
+import SwiftResponsesDSL
+
+// Create your AI assistant
+let client = try LLMClient(
+    baseURLString: "https://api.openai.com/v1/responses",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!
+)
+
+// Start a conversation
 let response = try await client.respond(to: ResponseRequest(
     model: "gpt-4",
-    config: {
-        Temperature(0.7)        // Balanced creativity
-        MaxOutputTokens(150)    // Reasonable response length
-    },
     input: {
-        system("You are a helpful programming tutor")
-        user("What is recursion in programming?")
+        system("You are a friendly and knowledgeable AI assistant.")
+        user("What's the most important concept in programming?")
     }
 ))
 
-print("Answer:", response.choices.first?.message.content ?? "")
+print("🤖 Assistant:", response.choices.first?.message.content ?? "")
 ```
 
-### Basic Streaming
+### 🎨 Content Generation (Creative Writing)
 
 ```swift
-let request = ResponseRequest(
+// Generate creative content with specific style
+let story = try await client.respond(to: ResponseRequest(
+    model: "gpt-4",
+    config: {
+        Temperature(0.9)        // High creativity
+        MaxOutputTokens(800)    // Allow longer content
+        TopP(0.95)             // Diverse word choices
+    },
+    input: {
+        system("You are a creative storyteller who writes engaging narratives.")
+        user("Write a short story about a robot learning to paint")
+    }
+))
+
+if let content = story.choices.first?.message.content {
+    print("🎨 Generated Story:")
+    print(content)
+}
+```
+
+### 📚 Educational Assistant (Smart Tutoring)
+
+```swift
+// Create an intelligent tutoring system
+let lesson = try await client.respond(to: ResponseRequest(
+    model: "gpt-4",
+    config: {
+        Temperature(0.3)        // Factual and educational
+        MaxOutputTokens(1000)   // Comprehensive explanations
+    },
+    input: {
+        system("""
+        You are an expert programming tutor who explains concepts clearly.
+        Break down complex topics into simple, understandable parts.
+        Include practical examples and encourage questions.
+        """)
+        user("Explain how closures work in Swift with examples")
+    }
+))
+
+print("👨‍🏫 Tutor:", lesson.choices.first?.message.content ?? "")
+```
+
+### 🔧 Tool Integration (AI with Superpowers)
+
+```swift
+// Give AI access to external tools
+let tools = try Tools([
+    Tool(type: "function", function: Tool.Function(
+        name: "calculate",
+        description: "Perform mathematical calculations",
+        parameters: [
+            "expression": .string(description: "Math expression to evaluate")
+        ]
+    )),
+    Tool(type: "function", function: Tool.Function(
+        name: "get_weather",
+        description: "Get current weather for a location",
+        parameters: [
+            "location": .string(description: "City name")
+        ]
+    ))
+])
+
+let smartResponse = try await client.respond(to: ResponseRequest(
+    model: "gpt-4",
+    config: {
+        ToolChoice("auto")      // Let AI decide when to use tools
+        MaxToolCalls(3)         // Allow multiple tool uses
+    },
+    input: {
+        system("You are a helpful assistant with access to tools.")
+        user("What's 15 × 23 and what's the weather like in San Francisco?")
+    },
+    tools: tools
+))
+
+print("🛠️ Smart Assistant:", smartResponse.choices.first?.message.content ?? "")
+```
+
+### 🌊 Real-Time Streaming (Live Interaction)
+
+```swift
+// Experience real-time AI responses
+let streamRequest = ResponseRequest(
     model: "gpt-4",
     config: {
         Temperature(0.8)
         StreamOptions(["include_usage": true])
     },
     input: {
-        user("Write a creative story about AI")
+        user("Write a haiku about programming, word by word")
     }
 )
 
-print("🤖 Assistant: ", terminator: "")
-let stream = client.stream(request: request)
+print("📝 Live Writing: ", terminator: "")
+let stream = client.stream(request: streamRequest)
 
 for try await event in stream {
     switch event {
     case .outputItemAdded(let item):
         if case .message(let message) = item,
            let content = message.content {
+            // Show each word as it's generated
             print(content, terminator: "")
             fflush(stdout)
+            // Add dramatic pauses for effect
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
         }
-    case .completed:
-        print("\n✅ Story complete!")
+    case .completed(let response):
+        print("\n✅ Poem complete!")
+        if let usage = response.usage {
+            print("📊 Tokens used: \(usage.totalTokens)")
+        }
     }
 }
 ```
@@ -236,13 +331,73 @@ let result = try await client.respond(to: toolRequest)
 
 ## Requirements
 
+### Swift 6.2 Toolchain Setup
+
+SwiftResponsesDSL requires **Swift 6.2 or later**. Choose your setup based on your development environment:
+
+#### For Xcode Users (macOS)
+```bash
+# Requires Xcode 26+ (currently in beta)
+# Download from: https://developer.apple.com/xcode/
+xcode-select --install  # Install command line tools
+xcodebuild -version     # Verify Xcode version
+```
+
+**Xcode Version Requirements:**
+- **Xcode 26.0+** - Full Swift 6.2 support (currently beta)
+- **Minimum macOS**: 14.0+ (Sonoma) for Xcode 26
+
+#### For Command Line / CI Users
+```bash
+# Install Swiftly (Swift toolchain manager)
+curl -L https://github.com/swiftlang/swiftly/releases/latest/download/swiftly-install.sh | bash
+source ~/.swiftly/env.sh
+
+# Install Swift 6.2 toolchain
+swiftly install 6.2
+
+# Set as default
+swiftly use 6.2
+
+# Verify installation
+swift --version  # Should show Swift 6.2.x
+```
+
+#### For Linux Users
+```bash
+# Ubuntu/Debian
+wget https://swift.org/builds/swift-6.2-release/ubuntu2204/swift-6.2-RELEASE/swift-6.2-RELEASE-ubuntu22.04.tar.gz
+tar xzf swift-6.2-RELEASE-ubuntu22.04.tar.gz
+export PATH=$(pwd)/swift-6.2-RELEASE-ubuntu22.04/usr/bin:$PATH
+
+# Verify
+swift --version
+```
+
+#### For CI/CD Pipelines
+```yaml
+# GitHub Actions example
+- name: Setup Swift
+  uses: swift-actions/setup-swift@v2
+  with:
+    swift-version: '6.2'
+
+# Or with Swiftly
+- name: Setup Swiftly
+  run: |
+    curl -L https://github.com/swiftlang/swiftly/releases/latest/download/swiftly-install.sh | bash
+    source ~/.swiftly/env.sh
+    swiftly install 6.2
+    swiftly use 6.2
+```
+
 ### System Requirements
-- **Swift**: 6.2 or later
 - **Platforms**:
   - macOS 12.0+
   - iOS 15.0+
   - Linux (Ubuntu 22.04+)
-- **Xcode**: 14.0+ (for development)
+- **Memory**: 4GB+ RAM recommended
+- **Storage**: 2GB+ free space for toolchain and dependencies
 
 ### Dependencies
 - **Foundation** (built-in) - Core iOS/macOS framework

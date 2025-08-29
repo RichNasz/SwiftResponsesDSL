@@ -18,6 +18,7 @@ jobs:
   build-docs:
     name: Build Documentation
     runs-on: macos-latest
+    # Note: Requires Xcode 26+ (beta) for Swift 6.2 support
 
     steps:
     - name: Checkout
