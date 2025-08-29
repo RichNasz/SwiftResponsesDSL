@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: macos-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Swift
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: "6.2"
+
+    - name: Build for release
+      run: swift build --configuration release
+
+    - name: Run tests
+      run: swift test --configuration release
+
+    - name: Generate documentation
+      run: |
+        if swift package --help | grep -q generate-documentation; then
+          swift package generate-documentation --target SwiftResponsesDSL --output-path docs
+        fi
+
+    - name: Create release archive
+      run: |
+        # Create a zip archive of the package
+        git archive --format=zip --prefix=SwiftResponsesDSL/ -o SwiftResponsesDSL-${{ github.ref_name }}.zip ${{ github.ref }}
+
+    - name: Extract release notes from CHANGELOG
+      id: changelog
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          # Extract release notes for this version
+          RELEASE_NOTES=$(awk '/^## / {if (found) exit; if ($2 == "${{ github.ref_name }}" || $2 == "v${{ github.ref_name }}") found=1; next} found {print}' CHANGELOG.md)
+          if [ -z "$RELEASE_NOTES" ]; then
+            RELEASE_NOTES="Release ${{ github.ref_name }}"
+          fi
+        else
+          RELEASE_NOTES="Release ${{ github.ref_name }}"
+        fi
+        echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+        echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref_name }}
+        body: |
+          ${{ steps.changelog.outputs.release_notes }}
+
+          ## Installation
+
+          ```swift
+          .package(url: "https://github.com/RichNasz/SwiftResponsesDSL.git", from: "${{ github.ref_name }}")
+          ```
+
+          ## Changes
+
+          See [CHANGELOG.md](https://github.com/RichNasz/SwiftResponsesDSL/blob/main/CHANGELOG.md) for detailed changes.
+        draft: false
+        prerelease: false
+
+  validate-spi:
+    name: Validate Swift Package Index
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Validate package for Swift Package Index
+      run: |
+        # Check that Package.swift is valid
+        swift package validate
+
+        # Check for required metadata
+        if ! grep -q "description:" Package.swift; then
+          echo "::warning::Package.swift missing description"
+        fi
+
+        # Check for proper license
+        if [ ! -f LICENSE.txt ]; then
+          echo "::warning::Missing LICENSE.txt file"
+        fi
+
+        # Check for README
+        if [ ! -f README.md ]; then
+          echo "::error::Missing README.md file"
+          exit 1
+        fi
+
+        echo "✅ Package is ready for Swift Package Index"

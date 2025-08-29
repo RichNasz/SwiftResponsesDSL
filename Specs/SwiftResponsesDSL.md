@@ -963,24 +963,46 @@ Purpose: Provide shorthand for creating common message types in builders, reduci
 
 6. Actor: LLMClient
 
+**Authentication Requirements:**
+The LLMClient must support API key authentication for LLM API access. Authentication is critical for production use and must be implemented securely.
+
+**Supported Authentication Methods:**
+1. **API Key Authentication**: Required for most LLM APIs (OpenAI, etc.)
+2. **No Authentication**: For testing or authenticated environments
+3. **Custom Headers**: Extensible for future authentication methods
+
 Signature:actor LLMClient {
-    private let baseURL: String
-    private let apiKey: String
+    public let baseURL: URL
     private let session: URLSession
+    private let apiKey: String?
+    private let hasAuth: Bool
+
+    // Primary initializer with API key
+    public init(baseURLString: String, apiKey: String) throws
+
+    // Alternative initializer without authentication
+    public init(baseURLString: String) throws
+
+    // URL-based initializer with optional API key
+    public init(baseURL: URL, apiKey: String? = nil, session: URLSession = .shared)
+
+    // Authentication validation
+    public nonisolated var hasAuthentication: Bool { hasAuth }
+    public nonisolated func validateAuthentication() throws
+
+    // Initialization requirements:
+    // - baseURL must be a valid URL
+    // - apiKey (if provided) cannot be empty
+    // - hasAuth computed during initialization for thread-safe access
+
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
-    init(baseURL: String, apiKey: String, sessionConfiguration: URLSessionConfiguration = .default) throws {
-        guard !baseURL.isEmpty else {
-            throw LLMError.missingBaseURL
-        }
-        guard !apiKey.isEmpty else {
-            throw LLMError.invalidValue("API key cannot be empty")
-        }
-
+    init(baseURL: URL, apiKey: String? = nil, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.apiKey = apiKey
-        self.session = URLSession(configuration: sessionConfiguration)
+        self.hasAuth = apiKey != nil
+        self.session = session
 
         self.decoder = JSONDecoder()
         self.decoder.keyDecodingStrategy = .convertFromSnakeCase

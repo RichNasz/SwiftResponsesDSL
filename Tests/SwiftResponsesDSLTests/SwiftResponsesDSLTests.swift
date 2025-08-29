@@ -103,3 +103,30 @@ import Foundation
     let assistantMsg = assistant("Hi there")
     #expect(assistantMsg.role == .assistant)
 }
+
+@Test func testClientAuthentication() async throws {
+    // Test client with API key
+    let clientWithAuth = try LLMClient(baseURLString: "https://api.example.com", apiKey: "test-key")
+    #expect(clientWithAuth.hasAuthentication == true)
+    try clientWithAuth.validateAuthentication() // Should not throw
+
+    // Test client without API key
+    let clientWithoutAuth = try LLMClient(baseURLString: "https://api.example.com")
+    #expect(clientWithoutAuth.hasAuthentication == false)
+    #expect(throws: LLMError.self) {
+        try clientWithoutAuth.validateAuthentication() // Should throw
+    }
+
+    // Test client with optional API key
+    let clientOptionalAuth = LLMClient(baseURL: URL(string: "https://api.example.com")!, apiKey: nil)
+    #expect(clientOptionalAuth.hasAuthentication == false)
+
+    let clientWithOptionalKey = LLMClient(baseURL: URL(string: "https://api.example.com")!, apiKey: "optional-key")
+    #expect(clientWithOptionalKey.hasAuthentication == true)
+}
+
+@Test func testClientInitialization() throws {
+    // Test valid URL string
+    let client = try LLMClient(baseURLString: "https://api.openai.com/v1/responses", apiKey: "test-key")
+    #expect(client.hasAuthentication == true)
+}

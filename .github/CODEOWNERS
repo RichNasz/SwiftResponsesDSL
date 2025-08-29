@@ -1,0 +1,22 @@
+# Code owners for SwiftResponsesDSL
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners
+* @RichNasz
+
+# Core implementation
+Sources/SwiftResponsesDSL/ @RichNasz
+
+# Tests
+Tests/ @RichNasz
+
+# Documentation
+*.md @RichNasz
+Sources/SwiftResponsesDSL/SwiftResponsesDSL.docc/ @RichNasz
+
+# CI/CD
+.github/ @RichNasz
+
+# Package configuration
+Package.swift @RichNasz
+Package@*.swift @RichNasz

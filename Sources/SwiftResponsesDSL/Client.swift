@@ -16,18 +16,62 @@ import Foundation
 public actor LLMClient {
     public let baseURL: URL
     private let session: URLSession
+    private let apiKey: String?
+    private let hasAuth: Bool
 
-    public init(baseURL: URL, session: URLSession = .shared) {
+    /// Initialize client with URL and optional API key
+    /// - Parameters:
+    ///   - baseURL: The base URL for the LLM API
+    ///   - apiKey: Optional API key for authentication
+    ///   - session: URLSession to use (defaults to shared)
+    public init(baseURL: URL, apiKey: String? = nil, session: URLSession = .shared) {
         self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.hasAuth = apiKey != nil
         self.session = session
     }
 
+    /// Initialize client with URL string and API key
+    /// - Parameters:
+    ///   - baseURLString: String representation of the base URL
+    ///   - apiKey: API key for authentication (required for most LLM APIs)
+    /// - Throws: `LLMError.invalidURL` if the URL string is invalid
+    public init(baseURLString: String, apiKey: String) throws {
+        guard let url = URL(string: baseURLString) else {
+            throw LLMError.invalidURL
+        }
+        self.baseURL = url
+        self.apiKey = apiKey
+        self.hasAuth = true
+        self.session = .shared
+    }
+
+    /// Initialize client with URL string (for testing or authenticated environments)
+    /// - Parameters:
+    ///   - baseURLString: String representation of the base URL
+    /// - Throws: `LLMError.invalidURL` if the URL string is invalid
+    /// - Note: Use this initializer when authentication is handled externally
     public init(baseURLString: String) throws {
         guard let url = URL(string: baseURLString) else {
             throw LLMError.invalidURL
         }
         self.baseURL = url
+        self.apiKey = nil
+        self.hasAuth = false
         self.session = .shared
+    }
+
+    /// Check if the client has authentication configured
+    public nonisolated var hasAuthentication: Bool {
+        hasAuth
+    }
+
+    /// Validate that authentication is properly configured
+    /// - Throws: `LLMError.authenticationFailed` if no API key is configured
+    public nonisolated func validateAuthentication() throws {
+        guard hasAuthentication else {
+            throw LLMError.authenticationFailed
+        }
     }
 
     /// Send a request and get a response
@@ -37,6 +81,11 @@ public actor LLMClient {
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Add authentication header if API key is provided
+        if let apiKey = apiKey {
+            urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
 
         let encoder = JSONEncoder()
         urlRequest.httpBody = try encoder.encode(request)
@@ -85,6 +134,11 @@ public actor LLMClient {
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Add authentication header if API key is provided
+        if let apiKey = apiKey {
+            urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
 
         let encoder = JSONEncoder()
         urlRequest.httpBody = try encoder.encode(streamingRequest)
