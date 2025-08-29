@@ -1,6 +1,6 @@
 # Swift Headless Code Generation Specification
 
-This specification outlines patterns and requirements for generating high-quality Swift code for headless applications in Swift 6.1+. It emphasizes type-safe APIs, concurrency with async/await and actors, JSON serialization via Codable, and extensibility. The guidelines are general-purpose, applicable to various domains (e.g., API clients, configuration, data processing). Use only Foundation; no external dependencies except for optional performance benchmarks (detailed below). Minimum platforms: macOS 12.0, iOS 15.0, and Swift 6.0+ toolchain on Linux (e.g., Ubuntu 22.04+ for server-side compatibility).
+This specification outlines patterns and requirements for generating high-quality Swift code for headless applications in Swift 6.2+. It emphasizes type-safe APIs, concurrency with async/await and actors, JSON serialization via Codable, and extensibility. The guidelines are general-purpose, applicable to various domains (e.g., API clients, configuration, data processing). Use only Foundation; no external dependencies except for optional performance benchmarks (detailed below). Minimum platforms: macOS 12.0, iOS 15.0, and Swift 6.2+ toolchain on Linux (e.g., Ubuntu 22.04+ for server-side compatibility).
 
 ## General Requirements
 
@@ -32,6 +32,14 @@ This specification outlines patterns and requirements for generating high-qualit
 
 * **Headless Compatibility**: Ensure code is usable in headless server environments (e.g., REST servers). Avoid dependencies on UI frameworks (e.g., UIKit, AppKit, SwiftUI). Make features like @Observable optional via conditional compilation (e.g., #if canImport(Observation)). The code must compile and run on Linux for server-side deployment; validate via swift build --platform linux.
 
+* **Modern Swift Features**: Leverage Swift 6.2+ capabilities:
+  - **Macros**: Use for code generation and compile-time validation (e.g., @attached(member) macros for builder patterns)
+  - **Improved Generics**: Utilize enhanced generic parameter inference and variadic generics where appropriate
+  - **Type-level Programming**: Use phantom types and type-level computations for enhanced type safety
+  - **Compile-time Evaluation**: Employ consteval and build-time checks for validation
+  - **Ownership and Borrowing**: Use Swift's ownership model for performance-critical code
+  - **C++ Interoperability**: Enable C++ interop when interfacing with C++ libraries (Swift 6.2+)
+
 ## Concurrency Requirements
 
 * **Asynchronous Operations**: Use async/await for I/O-bound tasks (e.g., networking). Mark methods as async throws where appropriate, leveraging async inference for trailing closures.
@@ -44,34 +52,69 @@ This specification outlines patterns and requirements for generating high-qualit
 
 * **Networking**: Use URLSession for HTTP requests, with configurable sessions. Handle authentication, headers, and errors asynchronously. Support timeouts and retries via URLSessionConfiguration. Explicitly support GET/POST; for advanced needs like multipart, use Data and URLRequest; exclude WebSockets unless specified in functional spec.
 
-* **Swift 6 Concurrency Considerations**:
+* **Swift 6.2+ Concurrency Considerations**:
+  - **Region-based Isolation**: Use @isolated(any) parameters for cross-actor calls and improved composability
+  - **Noncopyable Types**: Leverage ~Copyable for performance-critical resources that shouldn't be copied
+  - **Clock and Time**: Use Swift's Clock protocol for testable time-based operations
+  - **AsyncIteratorProtocol**: Prefer AsyncSequence for streaming operations with proper backpressure
+  - **Custom Executors**: Implement custom executors for specialized threading requirements
+  - **Distributed Actors**: Use for distributed computing scenarios across process boundaries
+  - **Task Local Values**: Leverage TaskLocal for context propagation in async operations
   - Resolve naming conflicts, e.g., use typealias ConcurrencyTask = _Concurrency.Task if defining a custom Task protocol.
   - In actor isolation, avoid capturing self directly in closures to prevent data races; use [self] capture lists or static methods.
-  - For generic parameter inference, Swift 6 requires explicit generic parameters in many contexts; all code examples should include explicit generics (e.g., Edge<NodeType, EventType>.simple(...)).
+  - For generic parameter inference, Swift 6.1 has improved inference but still requires explicit generics in complex contexts
   - Use async let for independent tasks; minimize unnecessary await to reduce actor hopping.
   - Prefer structured concurrency (e.g., TaskGroup) exclusively; no Dispatch.
 
   | Rule | Example | Rationale |
   |------|---------|-----------|
   | Use async let | async let result1 = task1(); async let result2 = task2(); let combined = await (result1, result2) | Run independent tasks concurrently to minimize suspension points |
-  | Explicit generics | func process<T: Sendable>(item: T) async | Swift 6 limits inference in async contexts |
+  | Explicit generics | func process<T: Sendable>(item: T) async | Swift 6.1 has improved inference but explicit generics ensure clarity |
   | Avoid self capture | actor MyActor { func run() { Task { [weak self] in await self?.mutate() } } } | Prevent data races in closures |
   | TaskGroup for parallelism | try await withThrowingTaskGroup(of: Result.self) { group in ... } | Structured over unstructured Tasks |
+  | Region-based isolation | func process(@isolated(any) actor: isolated Actor) | Improved cross-actor composability |
+  | Noncopyable resources | struct FileHandle: ~Copyable | Prevent unnecessary copying of resources |
 
 ## Enums
 
 * ```swift
-  enum CustomError: Error, LocalizedError, Equatable, Sendable { 
-    case invalidURL, encodingFailed(String), networkError(String), decodingFailed(String), serverError(statusCode: Int, message: String?), rateLimit, invalidResponse, invalidValue(String), missingRequiredField 
+  enum CustomError: Error, LocalizedError, Equatable, Sendable {
+    case invalidURL, encodingFailed(String), networkError(String), decodingFailed(String), serverError(statusCode: Int, message: String?), rateLimit, invalidResponse, invalidValue(String), missingRequiredField
+    case timeout(after: Duration), cancellation, resourceExhausted, preconditionFailed(String)
+    case securityViolation(String), dataCorruption(String), incompatibleVersion(String)
 
-    var errorDescription: String? { 
-      switch self { 
-        /* Provide descriptive strings, e.g., case .invalidValue(let msg): return "Invalid value: \(msg)" */ 
-      } 
-    } 
+    var errorDescription: String? {
+      switch self {
+        case .invalidURL: return "The provided URL is invalid"
+        case .encodingFailed(let msg): return "Failed to encode data: \(msg)"
+        case .networkError(let msg): return "Network operation failed: \(msg)"
+        case .decodingFailed(let msg): return "Failed to decode data: \(msg)"
+        case .serverError(let code, let msg): return "Server error (\(code)): \(msg ?? "Unknown error")"
+        case .rateLimit: return "Rate limit exceeded"
+        case .invalidResponse: return "Received invalid response"
+        case .invalidValue(let msg): return "Invalid value: \(msg)"
+        case .missingRequiredField: return "Required field is missing"
+        case .timeout(let duration): return "Operation timed out after \(duration)"
+        case .cancellation: return "Operation was cancelled"
+        case .resourceExhausted: return "System resources exhausted"
+        case .preconditionFailed(let msg): return "Precondition failed: \(msg)"
+        case .securityViolation(let msg): return "Security violation: \(msg)"
+        case .dataCorruption(let msg): return "Data corruption detected: \(msg)"
+        case .incompatibleVersion(let msg): return "Version incompatibility: \(msg)"
+      }
+    }
+
+    var recoverySuggestion: String? {
+      switch self {
+        case .rateLimit: return "Please wait before retrying the request"
+        case .timeout: return "Check network connectivity and try again"
+        case .networkError: return "Verify network settings and try again"
+        default: return nil
+      }
+    }
   }
   ```
-  * Example: Handles domain-specific errors with descriptive strings for equatability and localization. For complex associated values, ensure they conform to Equatable (e.g., via custom structs).
+  * Example: Modern error handling with comprehensive cases, localized descriptions, and recovery suggestions. Uses Swift 6.1 Duration for timeout representation and includes security/data integrity error cases.
 
 ## Protocols
 
@@ -83,22 +126,273 @@ This specification outlines patterns and requirements for generating high-qualit
   * Example: For customizable logging. Default implementation uses os_log on Apple platforms or console on Linux. Injectable for testing/server customization.
 
 * ```swift
-  public enum LogLevel: String, Sendable, CaseIterable { case debug = "DEBUG", info = "INFO", warning = "WARNING", error = "ERROR" } 
+  public enum LogLevel: String, Sendable, CaseIterable {
+    case debug = "DEBUG", info = "INFO", warning = "WARNING", error = "ERROR", critical = "CRITICAL"
+
+    var priority: Int {
+      switch self {
+        case .debug: return 0
+        case .info: return 1
+        case .warning: return 2
+        case .error: return 3
+        case .critical: return 4
+      }
+    }
+  }
   ```
+
+## Security Best Practices
+
+* **Input Validation**: Use Swift's type system and runtime checks to validate all inputs
+* **Secure Coding**: Avoid unsafe APIs, use safe alternatives for string operations
+* **Memory Safety**: Leverage Swift's memory safety features, avoid unsafe pointers
+* **Cryptography**: Use CryptoKit for cryptographic operations (Swift 6.2+)
+* **Authentication**: Implement secure authentication patterns with proper token handling
+* **Data Protection**: Use appropriate data protection classes for sensitive information
+
+## Observability & Monitoring
+
+* **Logging**: Implement structured logging with context propagation
+* **Metrics**: Use modern observability patterns for performance monitoring
+* **Tracing**: Implement distributed tracing for request flow visibility
+* **Health Checks**: Provide health check endpoints for service monitoring
+* **Diagnostics**: Include diagnostic information for troubleshooting
+
+## Modern Swift 6.2+ Language Features
+
+### Macros and Code Generation
+```swift
+// Example macro usage for builder patterns
+@attached(member, names: named(init), named(build))
+@attached(conformance)
+public macro Builder() = #externalMacro(module: "BuilderMacros", type: "BuilderMacro")
+```
+
+### Advanced Generics
+```swift
+// Variadic generics for flexible parameter handling
+func processValues<each Value: Sendable>(
+  values: repeat each Value
+) async throws -> (repeat each Value) {
+  // Process each value concurrently
+  async let results = (repeat await processValue(each values))
+  return (repeat each results)
+}
+```
+
+### Noncopyable Types
+```swift
+// File handle that cannot be copied
+struct FileHandle: ~Copyable, Sendable {
+  private let descriptor: Int32
+
+  consuming func close() throws {
+    // Close and invalidate the file descriptor
+  }
+}
+```
+
+### Custom Executors
+```swift
+// Custom executor for specialized threading
+public final class NetworkExecutor: SerialExecutor {
+  public func enqueue(_ job: consuming ExecutorJob)
+  public func asUnownedSerialExecutor() -> UnownedSerialExecutor
+}
+```
 
 ## Implementation Details
 
 * Mark public APIs as public; internals private.
 
-* Use Swift 6.1+ features: trailing commas, nonisolated, async inference.
+* **Generated Code Standards**: Every generated Swift code file must include a comprehensive header comment following Apple's Swift conventions and modern practices. The header must accommodate both initial generation and future modifications:
 
-* Package.swift: Define target with min platforms. Set swift-tools-version: 6.0 to enable Swift 6 features and concurrency checks. Enable strict concurrency with compiler flags: .unsafeFlags(["-strict-concurrency=complete"], .when(configuration: .debug)).
+```swift
+//
+//  [FileName].swift
+//  SwiftResponsesDSL
+//
+//  Generated by AI-assisted code generation.
+//  Created by Richard Naszcyniec on [Date].
+//  Copyright © [Year] Richard Naszcyniec. All rights reserved.
+//
+//  This file is part of SwiftResponsesDSL.
+//  License: [SPDX-License-Identifier: MIT] or see LICENSE file.
+//
+//  === CODE GENERATION INFO ===
+//  Generated with: [Generator Name] [Version]
+//  Specification: [Spec Version] ([Spec Date])
+//  Generation ID: [Unique ID for tracking]
+//
+//  === MODIFICATION POLICY ===
+//  This file was automatically generated. While modifications are allowed
+//  for debugging, customization, or extension purposes, please:
+//
+//  1. Update the modification history below
+//  2. Preserve the original generation metadata
+//  3. Consider regenerating from source when possible
+//  4. Document significant changes in comments
+//
+//  === MODIFICATION HISTORY ===
+//  [Date] - [Modifier] - [Change Description]
+//  - Example: 2024-01-15 - John Doe - Added custom validation logic
+//  - Example: 2024-02-01 - Jane Smith - Fixed threading issue in async method
+//
+//  Last Modified: [Date]
+//  Modified By: [Name/Role]
+//
+```
 
-* Add doc comments to public APIs, including usage examples and preconditions. Follow Apple's standards: Use triple-slash (///) comments structured with Markdown sections (e.g., Summary, Discussion, Parameters, Returns, Throws).
+**Alternative Modern Format (SPDX-Only):**
+```swift
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftResponsesDSL open source project
+//
+// Copyright (c) [Year] Richard Naszcyniec
+// Licensed under MIT License
+//
+// See https://github.com/RichNasz/SwiftResponsesDSL/blob/main/LICENSE for license information
+// See https://github.com/RichNasz/SwiftResponsesDSL for project repository
+//
+// === IMPORTANT NOTICE FOR MAINTAINERS ===
+// This file was automatically generated. Modifications are permitted but:
+//
+// - Always update the modification history below
+// - Preserve original generation metadata
+// - Consider if changes should be made to the source specification instead
+// - Document breaking changes clearly
+//
+// Generated by AI-assisted code generation
+// Generator: [Generator Name] [Version]
+// Specification: [Spec Version] ([Spec Date])
+// Generation ID: [Unique ID for tracking]
+//
+// === MODIFICATION HISTORY ===
+// [Date] - [Modifier] - [Change Type] - [Description]
+// - 2024-01-15 - Richard Naszcyniec - Initial Generation - AI-generated from spec v1.0
+// - 2024-02-01 - Developer Name - Bug Fix - Fixed async/await issue
+// - 2024-02-15 - Developer Name - Enhancement - Added custom validation
+//
+// Last Modified: [Date]
+// Modified By: [Name/Role]
+// Modification Count: [Number]
+//
+//===----------------------------------------------------------------------===//
+```
 
-* Avoid force-unwraps; use optionals and guards.
+**Header Comment Requirements:**
+- ✅ **File Reference**: Include file name and target name (standard Apple format)
+- ✅ **Copyright Notice**: Include copyright with year and creator name
+- ✅ **License Information**: Use SPDX license identifier or LICENSE file reference
+- ✅ **AI Attribution**: Clearly credit AI-assisted generation
+- ✅ **Generation Metadata**: Include generator version and specification details
+- ✅ **Repository Links**: Reference GitHub repository for context
+- ✅ **Consistent Formatting**: Follow Apple's comment style guidelines
+- ✅ **Modification Policy**: Clear guidelines for when/how to modify generated code
+- ✅ **Modification History**: Structured tracking of all changes
+- ✅ **Generation ID**: Unique identifier for tracking generations
 
-* Add inline comments and docstrings for clarity.
+**Modification Guidelines:**
+
+1. **When to Modify Generated Code:**
+   - **Debugging**: Fix runtime issues or add logging
+   - **Customization**: Add project-specific functionality
+   - **Optimization**: Performance improvements for specific use cases
+   - **Integration**: Adapt to specific framework or library requirements
+   - **Extensions**: Add features not covered by the specification
+
+2. **When to Regenerate Instead:**
+   - **Specification Changes**: Update spec and regenerate
+   - **Bug Fixes in Generator**: Fix issues at the source
+   - **Major Feature Additions**: Consider if it belongs in spec
+   - **API Changes**: Regenerate to maintain consistency
+
+3. **Modification Best Practices:**
+   - **Preserve Structure**: Keep generated structure intact when possible
+   - **Document Changes**: Add clear comments explaining modifications
+   - **Test Thoroughly**: Ensure modifications don't break existing functionality
+   - **Consider Impact**: Evaluate if changes should be upstreamed to specification
+   - **Version Control**: Use clear commit messages for generated file modifications
+
+**License Compliance Options:**
+1. **SPDX Identifier**: `// SPDX-License-Identifier: MIT`
+2. **Copyright + License File**: Traditional copyright notice + LICENSE reference
+3. **Hybrid Approach**: SPDX + repository links for transparency
+
+**Modification History Format:**
+```swift
+// Standard format for tracking changes:
+[Date] - [Modifier] - [Change Type] - [Description]
+// Examples:
+// 2024-01-15 - Richard Naszcyniec - Initial Generation - AI-generated from spec v1.0
+// 2024-02-01 - John Doe - Bug Fix - Fixed async/await deadlock
+// 2024-02-15 - Jane Smith - Enhancement - Added custom validation logic
+// 2024-03-01 - Dev Team - Performance - Optimized memory usage
+```
+
+**Modern Swift Community Alignment:**
+- ✅ Follows Apple's standard header format
+- ✅ Includes SPDX license identifiers (modern practice)
+- ✅ Provides repository context for generated code
+- ✅ Clear attribution for AI assistance
+- ✅ Comprehensive generation metadata
+- ✅ Copyright compliance for legal protection
+- ✅ **NEW**: Modification tracking for maintainability
+- ✅ **NEW**: Clear policies for when/how to modify generated code
+
+* **Swift 6.2+ Language Features**:
+  - Use macros for compile-time code generation and validation
+  - Leverage improved type inference and variadic generics
+  - Implement noncopyable types for resource management
+  - Use region-based isolation for actor communication
+  - Apply ownership and borrowing for performance optimization
+  - Enable C++ interoperability when needed
+  - Utilize enhanced concurrency diagnostics and performance improvements
+  - Leverage improved macro system with better error messages
+  - Take advantage of refined Sendable checking for better actor safety
+  - Use enhanced type system features for more expressive DSLs
+
+* **Package Configuration**:
+  ```swift
+  // Package.swift with modern Swift 6.2+ features
+  let package = Package(
+      name: "MyLibrary",
+      platforms: [
+          .macOS(.v12),
+          .iOS(.v15)
+      ],
+      products: [...],
+      targets: [
+          .target(
+              name: "MyLibrary",
+              swiftSettings: [
+                  .enableExperimentalFeature("StrictConcurrency"),
+                  .enableExperimentalFeature("Macros"),
+                  .unsafeFlags(["-Xfrontend", "-warn-concurrency"]),
+                  .enableUpcomingFeature("ConciseMagicFile"),
+                  .enableUpcomingFeature("ForwardTrailingClosures"),
+                  // Swift 6.2+ specific settings
+                  .enableUpcomingFeature("ExistentialAny"),
+                  .enableUpcomingFeature("ImplicitOpenExistentials")
+              ]
+          )
+      ]
+  )
+  ```
+
+* **Documentation Standards**: Use comprehensive triple-slash (///) comments with modern DocC features including:
+  - @MainActor and concurrency annotations
+  - @available for platform/version requirements
+  - @preconcurrency for backward compatibility
+  - Performance characteristics documentation
+  - Migration guides and deprecation notices
+
+* **Code Quality**:
+  - Use SwiftLint for consistent code style
+  - Implement SwiftFormat for automated formatting
+  - Add static analysis with SonarQube or similar tools
+  - Use swift-health-check for runtime diagnostics
 
 * **Security**: Avoid hard-coded secrets; use keychain or environment variables for sensitive data. Sanitize inputs to prevent injection (e.g., in URLs).
 
@@ -134,22 +428,136 @@ TargetName/                           ← Package root
 
 ## Testing Guidance
 
-* Include unit test patterns using Swift Testing: e.g., @Test for initializers with #expect(try config() doesn't throw) for valid configs, #expect(throws: CustomError.self) { try invalidConfig() } for invalids; async tests using #expect(await try perform(request) == expected); mock URLSession for networking via a testable URLSessionConfiguration; property-based testing for validations by generating test data manually (e.g., via parameterized @Test functions with ranges), as Swift Testing supports traits like .bug for known issues and .enabled(if:) for conditional tests.
+* **Modern Swift Testing Patterns**:
+  - Use @Test for test functions with modern async/await support
+  - Leverage @Suite for organizing related tests
+  - Implement parameterized tests with @Test(arguments:)
+  - Use #expect and #require for assertions and preconditions
+  - Apply traits like .bug, .enabled, .tags for test organization
+  - Implement @MainActor tests for UI-related code
+  - Use Clock.testing for time-dependent test logic
 
-* All test types must have explicit generic parameters for Swift 6 compatibility.
+* **Advanced Testing Features**:
+  ```swift
+  @Suite("Network Client Tests", .serialized)
+  struct NetworkClientTests {
+      @Test("Successful request", arguments: [
+          TestData.validRequest,
+          TestData.validResponse
+      ])
+      func testSuccessfulRequest(request: Request, expected: Response) async throws {
+          let client = try makeTestClient()
+          let response = try await client.send(request)
+          #expect(response == expected)
+      }
 
-* Error testing requires Equatable conformance on error types.
+      @Test("Error handling", .tags(.errorHandling))
+      func testErrorHandling() async throws {
+          let client = try makeTestClient()
+          #expect(throws: NetworkError.self) {
+              try await client.send(invalidRequest)
+          }
+      }
+  }
+  ```
 
-* Cover error handling, async scenarios, and platform-specific tests (e.g., Linux for server validation).
+* **Test Infrastructure**:
+  - Use dependency injection for testable code
+  - Implement protocol-based mocking for external dependencies
+  - Create test utilities for common setup/teardown patterns
+  - Use TestClock for time-dependent logic testing
+  - Implement test data factories for complex test scenarios
 
-* If generating tests, mock contexts and tasks for isolation.
+* **Concurrency Testing**:
+  - Test actor isolation and cross-actor communication
+  - Verify Sendable conformance with runtime checks
+  - Test async sequence handling and cancellation
+  - Validate deadlock prevention in concurrent operations
+
+* **Cross-Platform Testing**:
+  - Test Linux compatibility with CI pipelines
+  - Verify platform-specific behavior with conditional compilation
+  - Test different Swift versions for compatibility
+  - Validate performance characteristics across platforms
+
+## Performance Optimization
+
+* **Swift 6.2+ Performance Features**:
+  - **Compile-time Performance**: Use consteval for build-time computation
+  - **Memory Layout Optimization**: Leverage fixed-size arrays and inline storage
+  - **ARC Optimization**: Use consuming parameters and borrowing for zero-cost abstractions
+  - **Generic Specialization**: Enable generic specialization for better code generation
+  - **Dead Code Elimination**: Structure code to enable better DCE by the compiler
+
+* **Modern Benchmarking**:
+  ```swift
+  import Benchmark
+
+  let benchmarks = {
+      Benchmark("Network Request") { benchmark in
+          for _ in benchmark.scaledIterations {
+              let client = makeClient()
+              await benchmark.measure {
+                  _ = try await client.send(request)
+              }
+          }
+      }
+  }
+  ```
+
+* **Performance Monitoring**:
+  - Use signposts for Instruments integration
+  - Implement performance counters with Swift metrics
+  - Add memory profiling with leaks detection
+  - Monitor actor queue depths and scheduling
+
+## Cross-Platform Compatibility
+
+* **Swift 6.2+ Platform Features**:
+  - **Darwin Platforms**: Leverage Grand Central Dispatch optimizations
+  - **Linux**: Use epoll-based event loops for networking
+  - **Windows**: Support Windows-specific concurrency patterns
+  - **WebAssembly**: Enable WebAssembly compilation for browser deployment
+
+* **Conditional Compilation**:
+  ```swift
+  #if os(macOS)
+  // macOS-specific optimizations
+  #elseif os(Linux)
+  // Linux-specific implementations
+  #elseif os(Windows)
+  // Windows-specific code
+  #endif
+  ```
 
 ## Integration with Functional Specification
 
 Map functional requirements to this spec: e.g., identify protocols for extensible features first, then actors for concurrent parts. Prioritize must-haves (type safety, Sendable, validation) over nice-to-haves (benchmarks, full DocC). Validate generated code by simulating builds (e.g., check for strict concurrency warnings mentally) and ensuring Linux compatibility.
 
+**Code Generation Validation**: When generating code from this specification, ensure:
+- All generated files include the standard header comment format
+- AI assistance is properly credited in file headers
+- License references are accurate and current
+- Generation metadata includes timestamps and specification versions
+- File naming conventions are consistent with the target structure
+
 ## Long-Term Maintenance
 
-* Use semantic versioning in Package.swift (e.g., major for breaking changes). Include CHANGELOG.md with migration guides for major/minor releases.
+* **Version Management**:
+  - Use semantic versioning in Package.swift (e.g., major for breaking changes)
+  - Implement automated version bumping with conventional commits
+  - Maintain version compatibility matrices
 
-* Mark experimental features as @available(Swift 6.0, message: 'Beta: Feature may change'). Use semantic versioning for breaking changes; deprecate with @available(deprecated, message: "...").
+* **Deprecation Strategy**:
+  ```swift
+  @available(*, deprecated, message: "Use async version instead", renamed: "processAsync")
+  func process() throws -> Result
+
+  @available(macOS 13.0, iOS 16.0, *, message: "Requires newer OS version")
+  func newFeature() async throws
+  ```
+
+* **Migration Support**:
+  - Provide migration guides for major version changes
+  - Implement compatibility layers for gradual migration
+  - Use feature flags for experimental features

@@ -11,8 +11,10 @@ The root README.md file must include the following sections in order:
 
 1. **Package Title and Badge Section**
    - Project name and brief tagline
-   - Swift version badge, platform badges
-   - Build status and documentation links
+   - Swift version badge: `![Swift](https://img.shields.io/badge/Swift-6.2+-orange.svg)`
+   - Platform badges: `![macOS](https://img.shields.io/badge/macOS-12+-blue.svg)` `![iOS](https://img.shields.io/badge/iOS-15+-blue.svg)` `![Linux](https://img.shields.io/badge/Linux-Ubuntu_22.04+-blue.svg)`
+   - Build status: `![CI](https://github.com/RichNasz/SwiftResponsesDSL/workflows/CI/badge.svg)`
+   - Documentation: `![Documentation](https://github.com/RichNasz/SwiftResponsesDSL/workflows/Documentation/badge.svg)`
 
 2. **Overview Section**
    - Clear description of what SwiftResponsesDSL does
@@ -36,7 +38,7 @@ The root README.md file must include the following sections in order:
 
 6. **Requirements Section**
    - Swift version requirements
-   - Platform support (macOS, iOS versions)
+   - Platform support (macOS 12+, iOS 15+)
    - Dependencies (if any)
 
 7. **API Reference Section**
@@ -50,11 +52,12 @@ The root README.md file must include the following sections in order:
    - Logging and diagnostics information
 
 9. **Community and Support Section**
-   - GitHub repository link
-   - Issue reporting guidelines
-   - Discussion forum links
-   - Stack Overflow tags
-   - Discord/Slack community links
+    - GitHub repository: `https://github.com/RichNasz/SwiftResponsesDSL`
+    - Issue reporting: `https://github.com/RichNasz/SwiftResponsesDSL/issues`
+    - Pull requests: `https://github.com/RichNasz/SwiftResponsesDSL/pulls`
+    - Discussions: `https://github.com/RichNasz/SwiftResponsesDSL/discussions`
+    - Stack Overflow tags: `[swift-responses-dsl]`
+    - Security reporting: `https://github.com/RichNasz/SwiftResponsesDSL/security/advisories`
 
 10. **Changelog Section**
     - Recent changes and improvements
@@ -325,6 +328,8 @@ print(response.choices.first?.message.content ?? "No response")
 - **Code Examples**: Include practical code examples directly in Markdown code blocks with proper language tags
 - **DSL Documentation**: **MANDATORY** creation of DSL.md article explaining Domain Specific Language concepts with beginner-friendly examples, step-by-step tutorials, and practical code samples
 - **Generation Command**: Document generation with `swift package generate-documentation --target SwiftResponsesDSL`
+- **GitHub Pages**: Deploy documentation to `https://richnasz.github.io/SwiftResponsesDSL/`
+- **Repository**: Documentation source at `https://github.com/RichNasz/SwiftResponsesDSL/tree/main/Sources/SwiftResponsesDSL/SwiftResponsesDSL.docc/`
 
 ### Version and Release Documentation
 - **CHANGELOG.md**: Maintain a changelog following semantic versioning with sections for:
@@ -334,6 +339,7 @@ print(response.choices.first?.message.content ?? "No response")
   - Removed: Deleted features
   - Fixed: Bug fixes
   - Security: Security-related changes
+  - Location: `https://github.com/RichNasz/SwiftResponsesDSL/blob/main/CHANGELOG.md`
 - **Migration Guides**: Include detailed migration instructions for breaking changes with:
   - Before/after code examples
   - Step-by-step migration process
@@ -357,9 +363,15 @@ print(response.choices.first?.message.content ?? "No response")
 
 ### CI/CD Integration
 - **Automated Documentation Generation**: Set up GitHub Actions for automatic DocC generation
+  - Workflow file: `.github/workflows/documentation.yml`
+  - Repository: `https://github.com/RichNasz/SwiftResponsesDSL`
 - **Link Checking**: Implement automated link validation in CI pipeline
+  - Action: `lycheeverse/lychee-action`
 - **Documentation Testing**: Automated verification that code examples compile
-- **Deployment Automation**: Automated deployment to GitHub Pages or custom hosting
+  - Swift build verification in CI
+- **Deployment Automation**: Automated deployment to GitHub Pages
+  - Pages URL: `https://richnasz.github.io/SwiftResponsesDSL/`
+  - Deployment from `docs/` branch
 
 ### Internationalization & Accessibility
 - **Localization Support**: Prepare documentation structure for multiple languages
@@ -375,19 +387,27 @@ print(response.choices.first?.message.content ?? "No response")
 
 ### Quality Assurance
 - **Link Validation**: Ensure all cross-references and external links work
+  - Use GitHub Actions for automated link checking
 - **Code Testing**: Verify all code examples compile and run correctly
+  - CI workflow validates example compilation
 - **Accessibility**: Include alt-text for images and diagrams, follow WCAG guidelines
+  - Accessibility audit: `https://github.com/RichNasz/SwiftResponsesDSL/blob/main/.github/workflows/accessibility.yml`
 - **Consistency**: Maintain consistent terminology and formatting throughout
 - **SEO Optimization**: Include meta descriptions and structured data for search engines
 - **Mobile Responsiveness**: Ensure documentation works well on mobile devices
 - **Review Process**: Documentation changes should be reviewed alongside code changes
 - **Automated Quality Checks**: Implement tooling for documentation quality validation
+  - Quality gates: `https://github.com/RichNasz/SwiftResponsesDSL/blob/main/.github/workflows/docs-quality.yml`
 
 ### Documentation Maintenance
 - **Version Management**: Tag documentation versions with releases
+  - Release tags: `https://github.com/RichNasz/SwiftResponsesDSL/tags`
 - **Archival Strategy**: Maintain archives of previous documentation versions
 - **Feedback Integration**: Include mechanisms for user feedback and suggestions
+  - GitHub Discussions: `https://github.com/RichNasz/SwiftResponsesDSL/discussions`
+  - Issues: `https://github.com/RichNasz/SwiftResponsesDSL/issues`
 - **Analytics Integration**: Track documentation usage and popular sections
+  - GitHub Insights: `https://github.com/RichNasz/SwiftResponsesDSL/pulse`
 - **Regular Updates**: Schedule regular documentation review and updates
 
 ## Documentation Governance & Workflow
@@ -418,6 +438,14 @@ print(response.choices.first?.message.content ?? "No response")
 
 ### Tooling & Automation
 - **Documentation Linters**: Use tools to check documentation quality
+  - `markdownlint`: For Markdown formatting consistency
+  - `vale`: For style and grammar checking
 - **Link Checkers**: Automate validation of all documentation links
+  - `lychee`: Fast link checker for documentation
+  - GitHub Action: `lycheeverse/lychee-action`
 - **Example Testers**: Automatically test that code examples compile
+  - Swift build verification in CI
+  - Custom script to extract and test code examples
 - **Analytics Tools**: Track documentation usage and effectiveness
+  - GitHub Insights: Repository analytics and traffic
+  - Google Analytics: For hosted documentation sites

@@ -1,6 +1,18 @@
 # Swift Language Specification for DSLs
 
-This specification outlines patterns and requirements for building embedded domain-specific languages (DSLs) in Swift 6.1+. It emphasizes declarative, type-safe APIs using result builders, concurrency with async/await and actors, JSON serialization via Codable, and extensibility. The guidelines are general-purpose, applicable to various domains (e.g., API requests, configuration, data processing). Specific examples draw from a chat completions context but can be adapted. Use only Foundation; no external dependencies. Minimum platforms: macOS 12.0, iOS 15.0.
+This specification outlines patterns and requirements for building embedded domain-specific languages (DSLs) in Swift 6.2+. It emphasizes declarative, type-safe APIs using result builders, concurrency with async/await and actors, JSON serialization via Codable, and extensibility. The guidelines are general-purpose, applicable to various domains (e.g., API requests, configuration, data processing). Specific examples draw from a chat completions context but can be adapted. Use only Foundation; no external dependencies. Minimum platforms: macOS 12.0, iOS 15.0.
+
+## DSL Fundamentals
+
+### What is a DSL?
+A Domain-Specific Language (DSL) is a specialized programming language designed for a specific application domain. In Swift, embedded DSLs leverage the language's type system, generics, and result builders to create expressive, type-safe APIs that feel like natural language for specific domains.
+
+### DSL Design Principles
+- **Expressiveness**: DSL should read like natural language for the domain
+- **Type Safety**: Compile-time guarantees prevent runtime errors
+- **Composability**: Easy to combine DSL elements for complex operations
+- **Extensibility**: Easy to add new features without breaking existing code
+- **Performance**: Minimal runtime overhead through compile-time optimizations
 
 ## General DSL Requirements
 
@@ -17,6 +29,375 @@ This specification outlines patterns and requirements for building embedded doma
 * **JSON Compatibility**: Align with common formats using Codable. Use CodingKeys for key mapping (e.g., snake_case). Handle existential types (e.g., any Protocol) with custom encoding: implement a type-erased wrapper (e.g., AnyEncodable) for heterogeneous arrays, using a switch on concrete types in encode(to:) or decode(from:). For arrays like [any DataElement], use a nestedUnkeyedContainer and encode each element's properties manually to avoid type erasure issues.
 
 * **Performance**: Favor value types (structs/enums) and compile-time features (result builders, @inlinable) to minimize runtime overhead. Use async inference where possible to reduce boilerplate in async methods.
+
+## Macro Opportunities for Boilerplate Reduction
+
+### Parameter Configuration Macros
+
+**@ParameterConfig Macro** - Automatically generates parameter structs with validation:
+
+```swift
+// Instead of manually writing:
+struct Temperature: ResponseConfigParameter {
+    let value: Double
+    init(_ value: Double) throws {
+        guard (0.0...2.0).contains(value) else {
+            throw LLMError.invalidValue("Temperature must be between 0.0 and 2.0")
+        }
+        self.value = value
+    }
+    func apply(to request: inout ResponseRequest) throws {
+        request.temperature = value
+    }
+}
+
+// Developer writes:
+@ParameterConfig(name: "Temperature", type: Double.self, range: 0.0...2.0, property: "temperature")
+struct Temperature {}
+```
+
+**Benefits:**
+- Reduces ~15 lines of boilerplate to 1 line
+- Automatic validation generation
+- Consistent error messages
+- Type-safe property assignment
+
+### Result Builder Generation Macros
+
+**@DSLBuilder Macro** - Generates complete result builders with all required methods:
+
+```swift
+// Instead of manually implementing:
+@resultBuilder
+struct RequestConfigBuilder {
+    static func buildBlock(_ components: (any RequestParameter)...) -> [any RequestParameter] {
+        Array(components)
+    }
+    static func buildOptional(_ component: [any RequestParameter]?) -> [any RequestParameter] {
+        component ?? []
+    }
+    // ... 8+ more methods
+}
+
+// Developer writes:
+@DSLBuilder(for: RequestParameter.self)
+struct RequestConfigBuilder {}
+```
+
+**Benefits:**
+- Eliminates ~50 lines of repetitive builder code
+- Guarantees all required methods are implemented
+- Consistent error handling across builders
+- Automatic array handling
+
+### Message Type Generation Macros
+
+**@MessageType Macro** - Generates message types with standard conformances:
+
+```swift
+// Instead of manually writing:
+struct SystemMessage: ResponseMessage {
+    let role: Role = .system
+    let content: [ContentPart]
+
+    init(text: String) {
+        self.content = [.text(text)]
+    }
+
+    init(content: [ContentPart]) {
+        self.content = content
+    }
+}
+
+// Developer writes:
+@MessageType(role: .system, name: "SystemMessage")
+struct SystemMessage {}
+```
+
+**Benefits:**
+- Standardizes message type implementation
+- Automatic ContentPart handling
+- Consistent initialization patterns
+- Type-safe content management
+
+### Protocol Conformance Macros
+
+**@DSLConformance Macro** - Automatically adds DSL-related protocol conformances:
+
+```swift
+// Instead of manual conformances:
+extension CustomParameter: RequestParameter {
+    func apply(to request: inout Request) throws {
+        // Custom logic
+    }
+}
+
+// Developer writes:
+@DSLConformance(RequestParameter.self, applyLogic: "request.customProperty = value")
+struct CustomParameter {
+    let value: String
+}
+```
+
+**Benefits:**
+- Automatic protocol implementation
+- Customizable application logic
+- Reduced boilerplate for extensions
+- Consistent conformance patterns
+
+### Error Handling Macros
+
+**@DSLError Macro** - Generates error enums with proper conformances and descriptions:
+
+```swift
+// Instead of manual error enum:
+enum ValidationError: Error, LocalizedError, Equatable {
+    case invalidRange(String, Double, ClosedRange<Double>)
+    case missingRequired(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidRange(let param, let value, let range):
+            return "\(param) value \(value) is outside valid range \(range)"
+        case .missingRequired(let param):
+            return "\(param) is required but not provided"
+        }
+    }
+}
+
+// Developer writes:
+@DSLError
+enum ValidationError {
+    case invalidRange(String, Double, ClosedRange<Double>)
+    case missingRequired(String)
+}
+```
+
+**Benefits:**
+- Automatic LocalizedError conformance
+- Consistent error message formatting
+- Equatable conformance for testing
+- Standardized error handling patterns
+
+### Validation Logic Macros
+
+**@ValidateProperty Macro** - Adds compile-time validation to properties:
+
+```swift
+struct RequestConfig {
+    @ValidateProperty(range: 0.0...2.0, errorMessage: "Temperature must be between 0.0 and 2.0")
+    var temperature: Double?
+
+    @ValidateProperty(minValue: 1, maxValue: 4000)
+    var maxTokens: Int?
+
+    @ValidateProperty(allowedValues: ["none", "auto", "required"])
+    var toolChoice: String?
+}
+```
+
+**Benefits:**
+- Compile-time validation guarantees
+- Automatic error generation
+- Consistent validation patterns
+- Reduced runtime validation code
+
+### Builder Pattern Macros
+
+**@BuilderPattern Macro** - Implements common builder patterns:
+
+```swift
+@BuilderPattern
+struct RequestBuilder<State> {
+    // Macro generates:
+    // - State tracking types
+    // - Builder methods
+    // - Validation logic
+    // - Build() method with state checking
+}
+
+let request = RequestBuilder<Empty>()
+    .withModel("gpt-4")        // Returns RequestBuilder<ModelSet>
+    .withMessages([...])       // Returns RequestBuilder<MessagesSet>
+    .build()                   // Compile-time validation
+```
+
+**Benefits:**
+- Type-safe builder pattern implementation
+- Compile-time state validation
+- Automatic method generation
+- Consistent builder patterns
+
+### Implementation Strategy
+
+**Macro Package Structure:**
+```
+Sources/
+├── SwiftResponsesMacros/
+│   ├── ParameterConfigMacro.swift
+│   ├── DSLBuilderMacro.swift
+│   ├── MessageTypeMacro.swift
+│   ├── DSLConformanceMacro.swift
+│   ├── DSLErrorMacro.swift
+│   ├── ValidatePropertyMacro.swift
+│   └── BuilderPatternMacro.swift
+└── SwiftResponsesDSL/
+    ├── Macros.swift (exports all macros)
+    └── ... (main DSL implementation)
+```
+
+**Usage in Package.swift:**
+```swift
+let package = Package(
+    name: "SwiftResponsesDSL",
+    products: [
+        .library(name: "SwiftResponsesDSL", targets: ["SwiftResponsesDSL"]),
+        .library(name: "SwiftResponsesMacros", targets: ["SwiftResponsesMacros"])
+    ],
+    targets: [
+        .macro(name: "SwiftResponsesMacros"),
+        .target(name: "SwiftResponsesDSL", dependencies: ["SwiftResponsesMacros"])
+    ]
+)
+```
+
+**Developer Usage:**
+```swift
+// In user's Package.swift
+dependencies: [
+    .package(url: "https://github.com/RichNasz/SwiftResponsesDSL", from: "1.0.0")
+]
+
+// In user's code
+import SwiftResponsesMacros
+import SwiftResponsesDSL
+
+@ParameterConfig(name: "Temperature", type: Double.self, range: 0.0...2.0, property: "temperature")
+struct Temperature {}
+
+@DSLBuilder(for: RequestParameter.self)
+struct RequestConfigBuilder {}
+```
+
+## DSL Design Patterns
+
+### Builder Pattern with Result Builders
+```swift
+// Modern DSL using result builders
+let request = try Request(model: "gpt-4") {
+    Temperature(0.7)
+    MaxTokens(1000)
+} messages: {
+    system("You are a helpful assistant")
+    user("Explain quantum computing")
+    if includeContext {
+        user("Additional context here")
+    }
+}
+```
+
+### Protocol-Oriented Configuration
+```swift
+// Protocol-based configuration system
+protocol RequestParameter {
+    func apply(to request: inout Request) throws
+}
+
+struct Temperature: RequestParameter {
+    let value: Double
+    init(_ value: Double) throws {
+        // Validation logic
+    }
+    func apply(to request: inout Request) throws {
+        request.temperature = value
+    }
+}
+```
+
+### Fluent Interface Pattern
+```swift
+// Method chaining for fluent APIs
+let client = LLMClient(baseURL: url)
+    .withTimeout(30)
+    .withRetryPolicy(.exponentialBackoff)
+    .withAuth(apiKey: key)
+```
+
+### Type-Safe Builders with Phantom Types
+```swift
+// Phantom types for compile-time state tracking
+struct RequestBuilder<State> {
+    // Implementation ensuring valid state transitions
+}
+
+let request = RequestBuilder<Empty>()
+    .withModel("gpt-4")        // Returns RequestBuilder<ModelSet>
+    .withMessages([...])       // Returns RequestBuilder<MessagesSet>
+    .build()                   // Only available when all required fields set
+```
+
+## DSL Anti-Patterns to Avoid
+
+### ❌ Over-Abstraction
+```swift
+// AVOID: Too abstract, loses domain meaning
+let config = Builder()
+    .add("temperature", 0.7)
+    .add("max_tokens", 1000)
+
+// PREFER: Domain-specific, type-safe
+let config = RequestConfig {
+    Temperature(0.7)
+    MaxTokens(1000)
+}
+```
+
+### ❌ String-Based Configuration
+```swift
+// AVOID: Runtime errors, no autocomplete
+client.configure("temperature", value: 0.7)
+client.configure("model", value: "gpt-4")
+
+// PREFER: Type-safe, compile-time checked
+client.configure {
+    Temperature(0.7)
+    Model(.gpt4)
+}
+```
+
+### ❌ Mixing Concerns
+```swift
+// AVOID: Builder handles too many responsibilities
+let request = RequestBuilder()
+    .setModel("gpt-4")
+    .setTemperature(0.7)
+    .setNetworkingTimeout(30)    // Networking concern
+    .setCachePolicy(.reload)     // Caching concern
+    .setLoggingLevel(.debug)     // Logging concern
+
+// PREFER: Focused, single-responsibility builders
+let request = RequestBuilder {
+    Model(.gpt4)
+    Temperature(0.7)
+}
+let network = NetworkConfig {
+    Timeout(30)
+    CachePolicy(.reload)
+}
+```
+
+### ❌ Ignoring Swift's Type System
+```swift
+// AVOID: Any loses type safety
+let parameters: [Any] = [0.7, 1000, "gpt-4"]
+
+// PREFER: Generic, type-safe containers
+let parameters: [any RequestParameter] = [
+    Temperature(0.7),
+    MaxTokens(1000),
+    Model(.gpt4)
+]
+```
 
 ## Concurrency Requirements
 
@@ -38,17 +419,33 @@ This specification outlines patterns and requirements for building embedded doma
   * Example: Represents categories in a domain; encodes as strings.
 
 * ```swift
-  enum CustomError: Error, LocalizedError { 
-    case invalidURL, encodingFailed(String), networkError(String), decodingFailed(String), serverError(statusCode: Int, message: String?), rateLimit, invalidResponse, invalidValue(String), missingRequiredField 
+  enum LLMError: Error, LocalizedError, Equatable {
+    case invalidURL, encodingFailed(String), networkError(String), decodingFailed(String), serverError(statusCode: Int, message: String?), rateLimit, invalidResponse, invalidValue(String), missingRequiredField
+    case authenticationFailed, timeout, sslError(String), httpError(statusCode: Int, message: String?)
+    case jsonParsingError(String), invalidParameter(String, String)
 
-    var errorDescription: String? { 
-      switch self { 
-        /* Provide descriptive strings, e.g., case .invalidValue(let msg): return "Invalid value: \(msg)" */ 
-      } 
-    } 
+    var errorDescription: String? {
+      switch self {
+        case .invalidURL: return "The provided URL is invalid"
+        case .encodingFailed(let msg): return "Failed to encode data: \(msg)"
+        case .networkError(let msg): return "Network operation failed: \(msg)"
+        case .decodingFailed(let msg): return "Failed to decode data: \(msg)"
+        case .serverError(let code, let msg): return "Server error (\(code)): \(msg ?? "Unknown error")"
+        case .rateLimit: return "Rate limit exceeded"
+        case .invalidResponse: return "Received invalid response"
+        case .invalidValue(let msg): return "Invalid value: \(msg)"
+        case .missingRequiredField: return "Required field is missing"
+        case .authenticationFailed: return "Authentication failed"
+        case .timeout: return "Request timed out"
+        case .sslError(let msg): return "SSL/TLS error: \(msg)"
+        case .httpError(let code, let msg): return "HTTP error (\(code)): \(msg ?? "Unknown error")"
+        case .jsonParsingError(let msg): return "JSON parsing error: \(msg)"
+        case .invalidParameter(let param, let reason): return "Invalid parameter '\(param)': \(reason)"
+      }
+    }
   }
   ```
-  * Example: Handles domain-specific errors with descriptive strings for equatability and localization.
+  * Example: Comprehensive error handling with localized descriptions, consistent with LLMError from the main specification.
 
 ## Protocols
 
@@ -92,11 +489,11 @@ This specification outlines patterns and requirements for building embedded doma
   * ```swift
     struct Temperature: ConfigParameter { 
       let value: Double; 
-      init(_ value: Double) throws { 
-        guard (0.0...2.0).contains(value) else { 
-          throw CustomError.invalidValue("Temperature must be between 0.0 and 2.0") 
-        }; 
-        self.value = value 
+      init(_ value: Double) throws {
+        guard (0.0...2.0).contains(value) else {
+          throw LLMError.invalidValue("Temperature must be between 0.0 and 2.0")
+        };
+        self.value = value
       } 
       func apply(to request: inout Request) throws { 
         request.temperature = value 
@@ -107,11 +504,11 @@ This specification outlines patterns and requirements for building embedded doma
   * ```swift
     struct MaxLimit: ConfigParameter { 
       let value: Int; 
-      init(_ value: Int) throws { 
-        guard value > 0 else { 
-          throw CustomError.invalidValue("MaxLimit must be positive") 
-        }; 
-        self.value = value 
+      init(_ value: Int) throws {
+        guard value > 0 else {
+          throw LLMError.invalidValue("MaxLimit must be positive")
+        };
+        self.value = value
       } 
       func apply(to request: inout Request) throws { 
         request.maxLimit = value 
@@ -283,6 +680,243 @@ This specification outlines patterns and requirements for building embedded doma
 
 * Add doc comments to public APIs, including usage examples and preconditions.
 
-## Testing Guidance
+## DSL Evolution and Maintenance
 
-* Include unit test patterns using Swift Testing: e.g., @Test for builders with #expect(try config() doesn't throw) for valid configs, #expect(throws: CustomError.self) { try invalidConfig() } for invalids; async tests for Client using #expect(await try client.perform(request) == expected); mock URLSession for networking via a testable URLSessionConfiguration; property-based testing for validations by generating test data manually (e.g., via parameterized @Test functions with ranges), as Swift Testing supports traits like .bug for known issues and .enabled(if:) for conditional tests.
+### Versioning Strategy
+
+* **Semantic Versioning for DSLs**:
+  - **Major**: Breaking changes to DSL syntax or core concepts
+  - **Minor**: New features, parameters, or improved syntax
+  - **Patch**: Bug fixes, documentation improvements, performance optimizations
+
+* **Deprecation Strategy**:
+  ```swift
+  @available(*, deprecated, message: "Use 'request' DSL syntax instead", renamed: "request")
+  func buildRequest(...) -> Request {
+      // Legacy implementation
+  }
+  ```
+
+### Migration Support
+
+* **Gradual Migration Path**:
+  ```swift
+  // Old syntax (deprecated but still works)
+  let request = client.request(model: "gpt-4", temperature: 0.7)
+
+  // New DSL syntax (preferred)
+  let request = try client.request {
+      Model(.gpt4)
+      Temperature(0.7)
+  }
+  ```
+
+* **Compatibility Layers**:
+  ```swift
+  extension LegacyClient {
+      func request(model: String, temperature: Double) -> Request {
+          // Bridge to new DSL
+          return try! Request(model: model) {
+              Temperature(temperature)
+          }
+      }
+  }
+  ```
+
+### Extensibility Guidelines
+
+* **Protocol Extensions**: Allow users to extend DSL with custom parameters
+* **Custom Builders**: Support custom result builders for specialized use cases
+* **Plugin Architecture**: Enable third-party extensions and integrations
+* **Type-Safe Extensions**: Ensure extensions maintain type safety guarantees
+
+### Documentation Evolution
+
+* **DSL Guides**: Update DSL guides with new features and patterns
+* **Migration Guides**: Provide clear migration paths for breaking changes
+* **Best Practices**: Evolve best practices based on community feedback
+* **Examples**: Maintain up-to-date examples showing current best practices
+
+### Performance Monitoring
+
+* **DSL Performance Benchmarks**: Track DSL performance over time
+* **Memory Usage Patterns**: Monitor memory usage of DSL constructs
+* **Compilation Time**: Track impact of DSL complexity on build times
+* **Runtime Performance**: Measure DSL execution performance vs manual APIs
+
+## Testing DSL Implementations
+
+### Unit Testing Patterns
+
+* **Builder Testing**:
+  ```swift
+  @Test("Result builder creates valid configuration")
+  func testResultBuilder() throws {
+      let config = try RequestConfig {
+          Temperature(0.7)
+          MaxTokens(1000)
+      }
+
+      #expect(config.temperature == 0.7)
+      #expect(config.maxTokens == 1000)
+  }
+
+  @Test("Builder handles validation errors")
+  func testBuilderValidation() {
+      #expect(throws: LLMError.invalidValue) {
+          try Temperature(3.0)  // Invalid range
+      }
+  }
+  ```
+
+* **Parameter Validation Testing**:
+  ```swift
+  @Test("Parameter validation", arguments: [
+      (0.0, true),   // Valid minimum
+      (2.0, true),   // Valid maximum
+      (-0.1, false), // Invalid minimum
+      (2.1, false)   // Invalid maximum
+  ])
+  func testTemperatureValidation(value: Double, shouldBeValid: Bool) {
+      if shouldBeValid {
+          #expect(throws: Never.self) {
+              try Temperature(value)
+          }
+      } else {
+          #expect(throws: LLMError.invalidValue) {
+              try Temperature(value)
+          }
+      }
+  }
+  ```
+
+### Integration Testing
+
+* **End-to-End DSL Usage**:
+  ```swift
+  @Test("Complete DSL workflow")
+  func testCompleteDSLWorkflow() async throws {
+      let client = try makeTestClient()
+
+      let response = try await client.send {
+          Model(.gpt4)
+          Temperature(0.7)
+      } messages: {
+          system("You are a helpful assistant")
+          user("Hello, world!")
+      }
+
+      #expect(!response.content.isEmpty)
+  }
+  ```
+
+* **Streaming DSL Testing**:
+  ```swift
+  @Test("Streaming DSL integration")
+  func testStreamingDSL() async throws {
+      let client = try makeTestClient()
+      var receivedEvents = [StreamingEvent]()
+
+      for try await event in client.stream {
+          Model(.gpt4)
+          Temperature(0.7)
+      } messages: {
+          user("Tell me a story")
+      } {
+          receivedEvents.append(event)
+      }
+
+      #expect(!receivedEvents.isEmpty)
+      #expect(receivedEvents.contains { $0.isCompletion })
+  }
+  ```
+
+### DSL-Specific Testing Considerations
+
+* **Syntax Validation**: Test that DSL syntax produces expected internal representations
+* **Type Safety**: Verify that invalid combinations are caught at compile time
+* **Performance**: Test DSL performance against manual API usage
+* **Error Propagation**: Ensure DSL errors are properly wrapped and propagated
+* **Extensibility**: Test that custom extensions work seamlessly with existing DSL
+
+### Mocking and Test Doubles
+
+* **Protocol-Based Mocking**:
+  ```swift
+  class MockLLMClient: LLMClientProtocol {
+      var sentRequests = [Request]()
+
+      func send(_ request: Request) async throws -> Response {
+          sentRequests.append(request)
+          return MockResponse.success
+      }
+  }
+  ```
+
+* **Builder Testing Utilities**:
+  ```swift
+  extension RequestConfig {
+      static func testConfig() -> RequestConfig {
+          try! RequestConfig {
+              Temperature(0.7)
+              MaxTokens(1000)
+          }
+      }
+  }
+  ```
+
+### Property-Based Testing
+
+* **DSL Input Generation**:
+  ```swift
+  @Test("Property-based DSL testing")
+  func testDSLProperties() {
+      // Generate random valid DSL configurations
+      let configs = (0..<100).map { _ in
+          RequestConfig {
+              Temperature(.random(in: 0...2))
+              MaxTokens(.random(in: 1...4000))
+          }
+      }
+
+      for config in configs {
+          #expect(config.isValid)
+          #expect(config.temperature != nil)
+          #expect(config.maxTokens != nil)
+      }
+  }
+  ```
+
+### Performance Testing
+
+* **DSL vs Manual API Comparison**:
+  ```swift
+  @Test("DSL performance benchmark")
+  func testDSLPerformance() {
+      measure {
+          let config = RequestConfig {
+              Temperature(0.7)
+              MaxTokens(1000)
+              // ... many parameters
+          }
+      }
+  }
+  ```
+
+* **Memory Usage Testing**:
+  ```swift
+  @Test("DSL memory efficiency")
+  func testDSLMemoryUsage() {
+      var configs = [RequestConfig]()
+
+      for _ in 0..<1000 {
+          configs.append(RequestConfig {
+              Temperature(0.7)
+              MaxTokens(1000)
+          })
+      }
+
+      #expect(configs.count == 1000)
+      // Memory profiling assertions
+  }
+  ```

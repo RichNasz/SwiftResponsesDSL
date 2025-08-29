@@ -30,7 +30,7 @@ Usability Enhancements: Provide convenience functions, implicit conversions in b
 
 Requirements
 
-Swift Version: 6.1+ (for trailing commas, nonisolated, improved type inference).
+Swift Version: 6.2+ (for trailing commas, nonisolated, improved type inference, enhanced macros, and refined concurrency).
 Dependencies: None; use only Foundation (URLSession for networking, Codable for JSON).
 API Compatibility: Align with OpenAI Responses JSON format (camelCase internally, snake_case in JSON via CodingKeys), including multimodal inputs (images/files via base64 data URLs or file IDs) and tools (web search, file search, function calls).
 Testing: Support Swift Testing for async validation (e.g., #expect with concurrency traits).
@@ -39,8 +39,7 @@ Minimum Platform Versions:
 - macOS 12.0
 - iOS 15.0
 - Linux (Ubuntu 22.04+ with Swift 6.0+ toolchain)
-- tvOS 15.0
-- watchOS 8.0
+
 
 Package.swift Configuration:
 ```swift
@@ -48,9 +47,7 @@ let package = Package(
     name: "SwiftResponsesDSL",
     platforms: [
         .macOS(.v12),
-        .iOS(.v15),
-        .tvOS(.v15),
-        .watchOS(.v8)
+        .iOS(.v15)
     ],
     products: [...],
     targets: [...]
@@ -207,10 +204,71 @@ Signature:enum AnyCodable: Codable, Sendable {
     case string(String)
     case array([AnyCodable])
     case dictionary([String: AnyCodable])
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null:
+            try container.encodeNil()
+        case .bool(let value):
+            try container.encode(value)
+        case .int(let value):
+            try container.encode(value)
+        case .double(let value):
+            try container.encode(value)
+        case .string(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .dictionary(let value):
+            try container.encode(value)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Int.self) {
+            self = .int(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .double(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([AnyCodable].self) {
+            self = .array(value)
+        } else if let value = try? container.decode([String: AnyCodable].self) {
+            self = .dictionary(value)
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "AnyCodable value cannot be decoded")
+        }
+    }
+
+    // Convenience accessors
+    var intValue: Int? {
+        if case .int(let value) = self { return value }
+        return nil
+    }
+
+    var stringValue: String? {
+        if case .string(let value) = self { return value }
+        return nil
+    }
+
+    var boolValue: Bool? {
+        if case .bool(let value) = self { return value }
+        return nil
+    }
+
+    var doubleValue: Double? {
+        if case .double(let value) = self { return value }
+        return nil
+    }
 }
 
-
-Purpose: Type-erased Codable for flexible JSON fields (e.g., metadata, error).
+Purpose: Type-erased Codable for flexible JSON fields (e.g., metadata, error). Provides complete encoding and decoding implementation for all supported types.
 
 
 UserMessage
@@ -259,38 +317,74 @@ Signature:struct Tool: Codable, Sendable {
     let function: Function?
     let fileSearch: FileSearch?
     let webSearchPreview: WebSearchPreview?
+
+    enum CodingKeys: String, CodingKey {
+        case type, function
+        case fileSearch = "file_search"
+        case webSearchPreview = "web_search_preview"
+    }
+
     struct Function: Codable, Sendable {
         let name: String
         let description: String?
         let parameters: [String: AnyCodable]
         let strict: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case name, description, parameters, strict
+        }
     }
+
     struct FileSearch: Codable, Sendable {
         let filters: [String: AnyCodable]?
         let maxNumResults: Int?
         let rankingOptions: RankingOptions?
         let vectorStoreIds: [String]?
+
+        enum CodingKeys: String, CodingKey {
+            case filters
+            case maxNumResults = "max_num_results"
+            case rankingOptions = "ranking_options"
+            case vectorStoreIds = "vector_store_ids"
+        }
+
         struct RankingOptions: Codable, Sendable {
             let ranker: String
             let scoreThreshold: Double
+
+            enum CodingKeys: String, CodingKey {
+                case ranker
+                case scoreThreshold = "score_threshold"
+            }
         }
     }
+
     struct WebSearchPreview: Codable, Sendable {
         let domains: [String]
         let searchContextSize: String
         let userLocation: UserLocation?
+
+        enum CodingKeys: String, CodingKey {
+            case domains
+            case searchContextSize = "search_context_size"
+            case userLocation = "user_location"
+        }
+
         struct UserLocation: Codable, Sendable {
             let type: String
             let city: String?
             let country: String?
             let region: String?
             let timezone: String?
+
+            enum CodingKeys: String, CodingKey {
+                case type, city, country, region, timezone
+            }
         }
     }
 }
 
-
-Purpose: Defines tools (e.g., function, file_search, web_search_preview) with configurations.
+Purpose: Defines tools (e.g., function, file_search, web_search_preview) with complete configurations and proper JSON mapping.
 
 
 Configuration Structs
@@ -953,9 +1047,89 @@ Signature:actor LLMClient {
     }
 
     private func performStreaming(request: ResponseRequest, continuation: AsyncThrowingStream<ResponseEvent, Error>.Continuation) async throws {
-        // Implementation for SSE streaming would go here
-        // This is a placeholder for the actual streaming implementation
+        let url = try createURL()
+        var streamingRequest = URLRequest(url: url)
+        streamingRequest.httpMethod = "POST"
+        streamingRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        streamingRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        streamingRequest.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        streamingRequest.setValue("keep-alive", forHTTPHeaderField: "Connection")
+
+        // Encode request body
+        streamingRequest.httpBody = try encoder.encode(request)
+
+        let (bytes, response) = try await session.bytes(for: streamingRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw LLMError.httpError(statusCode: httpResponse.statusCode, message: nil)
+        }
+
+        // Parse SSE events
+        var buffer = ""
+        for try await line in bytes.lines {
+            buffer += line + "\n"
+
+            if line.isEmpty {
+                // Process complete SSE event
+                if let event = try parseSSEEvent(from: buffer) {
+                    continuation.yield(event)
+                }
+                buffer = ""
+            }
+        }
+
         continuation.finish()
+    }
+
+    private func parseSSEEvent(from buffer: String) throws -> ResponseEvent? {
+        let lines = buffer.components(separatedBy: "\n")
+        var eventType: String?
+        var eventData: String?
+
+        for line in lines {
+            if line.hasPrefix("event: ") {
+                eventType = String(line.dropFirst(7))
+            } else if line.hasPrefix("data: ") {
+                eventData = String(line.dropFirst(6))
+            }
+        }
+
+        guard let eventType = eventType, let eventData = eventData else {
+            return nil
+        }
+
+        // Parse event data as JSON
+        guard let data = eventData.data(using: .utf8) else {
+            throw LLMError.decodingFailed("Invalid event data encoding")
+        }
+
+        switch eventType {
+        case "response.created":
+            let response = try decoder.decode(Response.self, from: data)
+            return .created(response)
+        case "response.in_progress":
+            let response = try decoder.decode(Response.self, from: data)
+            return .inProgress(response)
+        case "response.output_item.added":
+            let itemData = try decoder.decode([String: AnyCodable].self, from: data)
+            if let outputIndex = itemData["output_index"]?.intValue,
+               let itemJson = itemData["item"] {
+                // Parse the item based on its type
+                // This would need more specific implementation based on the item structure
+                return .outputItemAdded(outputIndex: outputIndex, item: .message(Message(type: "message", id: "", status: "", role: .assistant, content: [])))
+            }
+        case "response.completed":
+            let response = try decoder.decode(Response.self, from: data)
+            return .completed(response)
+        default:
+            return .unknown(type: eventType, data: [:])
+        }
+
+        return nil
     }
 }
 
