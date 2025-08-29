@@ -38,34 +38,83 @@ import Foundation
 /// that support OpenAI-compatible Responses endpoints.
 ///
 /// Key Features:
-/// - Type-safe API interactions
-/// - Declarative syntax with result builders
+/// - Type-safe API interactions with compile-time validation
+/// - Declarative syntax using Swift's result builder pattern
 /// - Multimodal content support (text, images, files)
 /// - Tool integration (functions, file search, web search)
-/// - Conversation management
-/// - Both synchronous and streaming responses
-/// - Comprehensive error handling
+/// - Conversation history management
+/// - Both synchronous and streaming response handling
+/// - Comprehensive error handling with localized messages
+/// - Modular architecture for maintainability and extensibility
 ///
-/// Example Usage:
+/// ## Example Usage
+///
+/// ### Basic Chat Interaction
 /// ```swift
 /// let client = try LLMClient(baseURLString: "https://api.openai.com/v1/responses")
 ///
-/// // Simple chat
+/// // Simple synchronous chat
 /// let response = try await client.chat(model: "gpt-4", message: "Hello!")
+/// print(response.choices.first?.message.content ?? "No response")
+/// ```
 ///
-/// // Advanced usage with configuration
+/// ### Advanced Configuration with Result Builders
+/// ```swift
+/// // Create a request with advanced configuration
 /// let request = try ResponseRequest(
 ///     model: "gpt-4",
 ///     config: {
-///         Temperature(0.7)
-///         MaxOutputTokens(100)
-///         TopP(0.9)
+///         Temperature(0.7)    // Control randomness
+///         MaxOutputTokens(100) // Limit response length
+///         TopP(0.9)          // Nucleus sampling
+///         FrequencyPenalty(0.1) // Reduce repetition
 ///     },
 ///     input: {
-///         system("You are a helpful assistant")
-///         user("Explain quantum computing")
+///         system("You are a helpful AI assistant specialized in programming.")
+///         user("Explain how to implement a binary search algorithm in Swift.")
 ///     }
 /// )
+///
+/// let response = try await client.respond(to: request)
+/// ```
+///
+/// ### Streaming Responses
+/// ```swift
+/// // Handle streaming responses for real-time interaction
+/// let stream = client.stream(request: request)
+///
+/// for try await event in stream {
+///     switch event {
+///     case .created:
+///         print("Stream created")
+///     case .inProgress:
+///         print("Processing...")
+///     case .completed(let response):
+///         print("Final response:", response.choices.first?.message.content ?? "")
+///     case .outputItemAdded(let item):
+///         if case .message(let message) = item {
+///             print("New content:", message.content)
+///         }
+///     case .unknown(let type, _):
+///         print("Unknown event type:", type)
+///     }
+/// }
+/// ```
+///
+/// ### Conversation Management
+/// ```swift
+/// // Manage conversation history
+/// var conversation = ResponseConversation()
+///
+/// conversation.append(system: "You are a helpful programming tutor.")
+/// conversation.append(user: "What is recursion?")
+///
+/// let response = try await client.chat(conversation: conversation)
+/// conversation.append(response: response)
+///
+/// // Continue the conversation
+/// conversation.append(user: "Can you give me an example?")
+/// let followUp = try await client.chat(conversation: conversation)
 /// ```
 ///
 /// The DSL supports both imperative and declarative programming styles,
