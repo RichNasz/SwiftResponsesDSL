@@ -1,0 +1,27 @@
+{
+  "object" : {
+    "artifacts" : [
+
+    ],
+    "dependencies" : [
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "swiftresponsesdsl",
+          "kind" : "fileSystem",
+          "location" : "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL",
+          "name" : "SwiftResponsesDSL"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL"
+        },
+        "subpath" : "swiftresponsesdsl"
+      }
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

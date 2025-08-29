@@ -1,0 +1,68 @@
+{
+  "": {
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/master.swiftdeps"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/API.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/API.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/API.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/API~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/API.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/API.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/Builders.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Builders.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Builders.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Builders~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Builders.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Builders.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/Client.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Client.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Client.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Client~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Client.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Client.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/Configuration.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Configuration.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Configuration.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Configuration~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Configuration.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Configuration.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/Convenience.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Convenience.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Convenience.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Convenience~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Convenience.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Convenience.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/Core.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Core.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Core.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Core~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Core.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Core.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/MacroExamples.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/MacroExamples.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/MacroExamples.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/MacroExamples~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/MacroExamples.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/MacroExamples.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/Messages.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Messages.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Messages.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Messages~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Messages.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/Messages.dia"
+  },
+  "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Sources/SwiftResponsesDSL/SwiftResponsesDSL.swift": {
+    "dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/SwiftResponsesDSL.d",
+    "object": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/SwiftResponsesDSL.swift.o",
+    "swiftmodule": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/SwiftResponsesDSL~partial.swiftmodule",
+    "swift-dependencies": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/SwiftResponsesDSL.swiftdeps",
+    "diagnostics": "/Users/rnaszcyn/Development/xcode26/SwiftResponsesDSL/Examples/Sample-Project/.build/index-build/arm64-apple-macosx/debug/SwiftResponsesDSL.build/SwiftResponsesDSL.dia"
+  }
+}
